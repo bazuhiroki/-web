@@ -2,9 +2,9 @@ package me.bazu.shitsuji.tools
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
@@ -74,11 +74,6 @@ class WebScraper(private val appContext: Context) {
                                 }
                             }, settleMs)
                         }
-
-                        override fun shouldInterceptRequest(
-                            view: WebView?,
-                            request: WebResourceRequest?,
-                        ) = null
                     }
                     cont.invokeOnCancellation { wv.stopLoading() }
                     wv.loadUrl(url)
@@ -89,6 +84,9 @@ class WebScraper(private val appContext: Context) {
             }
         } catch (e: TimeoutCancellationException) {
             Result.failure(IllegalStateException("ページの読み込みが ${timeoutMs}ms で終わりませんでした: $url"))
+        } catch (e: CancellationException) {
+            // 外側からのキャンセルは Result に包まず伝播させる。
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         } finally {

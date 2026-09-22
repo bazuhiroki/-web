@@ -21,7 +21,20 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build debug APK
-        run: ./gradlew :app:assembleDebug --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew :app:assembleDebug --console=plain 2>&1 | tee /tmp/build.log
+
+      # 失敗時、ジョブログの末尾にエラーだけを固めて出す。
+      # Gradleのスタックトレースは数百行あり、そのままでは読むのに割が合わない。
+      - name: Compile errors (compact)
+        if: failure()
+        run: |
+          echo "=================== COMPILE ERRORS ==================="
+          grep -E "^e: |^ERROR:|^AAPT|Execution failed for task" /tmp/build.log \
+            | sed 's#file:///home/runner/work/-web/-web/##' \
+            | sort -u | head -80
+          echo "=================== END ERRORS ==================="
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
